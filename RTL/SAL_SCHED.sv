@@ -17,6 +17,9 @@ module SAL_SCHED
     input   dram_ca_t           ca_arr[`DRAM_BK_CNT],
     input   axi_id_t            id_arr[`DRAM_BK_CNT],
     input   axi_len_t           len_arr[`DRAM_BK_CNT],
+    input   seq_num_t           seq_num_arr[`DRAM_BK_CNT],
+    
+    TIMING_IF.MON               timing_if,
 
     // grants to bank controllers
     output  logic [`DRAM_BK_CNT-1:0]  act_gnt_arr,
@@ -32,6 +35,27 @@ module SAL_SCHED
                                 is_t_ccd_met,
                                 is_t_rtw_met,
                                 is_t_wtr_met;
+                                
+    seq_num_t                   rd_seq_num, wr_seq_num;                            
+     
+    
+    
+    always_ff @(posedge clk) begin
+        if (~rst_n) begin
+            rd_seq_num                  <= 'd0;
+            wr_seq_num                  <= 'd0;
+        end
+        else begin
+            if (sched_if.rd_gnt == 1'b1) begin
+                rd_seq_num                  <= rd_seq_num + 'd1;
+            end
+            if (sched_if.wr_gnt == 1'b1) begin
+                wr_seq_num                  <= wr_seq_num + 'd1;
+            end
+        end
+    end                          
+                                
+                                
     always_comb begin
         for (int i=0; i<`DRAM_BK_CNT; i=i+1) begin
             act_gnt_arr[i]                  = 1'b0;
@@ -64,7 +88,7 @@ module SAL_SCHED
         end
         else if ((|rd_req_arr) & is_t_ccd_met & is_t_wtr_met) begin
             for (int i=0; i<`DRAM_BK_CNT; i=i+1) begin
-                if (rd_req_arr[i]) begin
+                if (seq_num_arr[i] == rd_seq_num) begin
                     rd_gnt_arr[i]                   = 1'b1;
                     sched_if.rd_gnt                 = 1'b1;
                     sched_if.ba                     = i;
@@ -77,7 +101,7 @@ module SAL_SCHED
         end
         else if ((|wr_req_arr) & is_t_ccd_met & is_t_rtw_met) begin
             for (int i=0; i<`DRAM_BK_CNT; i=i+1) begin
-                if (wr_req_arr[i]) begin
+                if (seq_num_arr[i] == wr_seq_num) begin
                     wr_gnt_arr[i]                   = 1'b1;
                     sched_if.wr_gnt                 = 1'b1;
                     sched_if.ba                     = i;
