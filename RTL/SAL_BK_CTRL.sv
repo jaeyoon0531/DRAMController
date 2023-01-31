@@ -26,6 +26,7 @@ module SAL_BK_CTRL
     output  dram_ca_t           ca_o,
     output  axi_id_t            id_o,
     output  axi_len_t           len_o,
+    output  seq_num_t           seq_num_o,
 
     input   wire                act_gnt_i,
     input   wire                rd_gnt_i,
@@ -47,6 +48,8 @@ module SAL_BK_CTRL
                                 is_t_rtp_met,
                                 is_t_wtp_met,
                                 is_row_open_met;
+                                
+                                                       
 
     // tried to make similar to the state machine
     // in the Micron dataset. Can eliminate some states
@@ -102,7 +105,7 @@ module SAL_BK_CTRL
                     if (is_t_rc_met) begin
                         act_req_o                   = 1'b1;
                         ra_o                        = req_if.ra;
-
+                        seq_num_o                   = req_if.seq_num;
                         if (act_gnt_i) begin
                             cur_ra_n                    = req_if.ra;
                             cnt_n                       = timing_if.t_rcd_m2;
@@ -133,6 +136,7 @@ module SAL_BK_CTRL
                         ca_o                        = req_if.ca;
                         id_o                        = req_if.id;
                         len_o                       = req_if.len;
+                        seq_num_o                   = req_if.seq_num;
 
                         if (req_if.wr) begin
                             // WRITE command
